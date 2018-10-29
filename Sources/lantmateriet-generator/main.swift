@@ -11,6 +11,8 @@
 import Foundation
 import ImageIO
 import CoreLocation
+import Utility
+import Basic
 
 // MARK: - WGS84 <-> UTM Conversion
 
@@ -460,7 +462,7 @@ extension CLLocation {
 
 // MARK: - ImageIO
 
-func geotag(inImageAt url: URL) -> CLLocation? {
+func geotag(inImageAt url: Foundation.URL) -> CLLocation? {
     guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
     guard let imageProperties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: AnyObject] else { return nil }
 
@@ -548,8 +550,39 @@ func lantmaterietLookup(for swerefCoordinate: SWEREFCoordinate) -> LantmaterietL
 
 // MARK: - Script
 
-let path = "~/Downloads/Capture One Export/DJI_0636.jpg" as NSString
-let urls = [URL(fileURLWithPath: path.expandingTildeInPath)]
+let arguments = ProcessInfo.processInfo.arguments.dropFirst()
+
+let parser = ArgumentParser(usage: "<options>", overview: "Generate a dataset for Lantmäteriet approval of the given images.")
+let pathsArgument = parser.add(option: "--images", shortName: "-i", kind: [String].self, strategy: ArrayParsingStrategy.upToNextOption,
+                               usage: "The images to look up.")
+
+func processArguments(arguments: ArgumentParser.Result) -> [String] {
+    if let paths = arguments.get(pathsArgument) {
+        return paths
+    } else {
+        return []
+    }
+}
+
+let paths: [String]
+
+do {
+    let parsedArguments = try parser.parse(Array(arguments))
+    paths = processArguments(arguments: parsedArguments)
+} catch let error as ArgumentParserError {
+    print(error.description)
+    exit(1)
+} catch let error {
+    print(error.localizedDescription)
+    exit(1)
+}
+
+guard paths.count > 0 else {
+    parser.printUsage(on: stdoutStream)
+    exit(1)
+}
+
+let urls = paths.compactMap({ URL(fileURLWithPath: $0) })
 
 for url in urls {
 
