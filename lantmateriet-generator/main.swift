@@ -484,23 +484,105 @@ func geotag(inImageAt url: URL) -> CLLocation? {
     return CLLocation(latitude: lat, longitude: lon)
 }
 
-let path = "~/Downloads/IMG_7325.JPG" as NSString
-let url = URL(fileURLWithPath: path.expandingTildeInPath)
-guard let gps = geotag(inImageAt: url) else {
-    print("No Geotag")
-    exit(1)
+// MARK: - Lantmäteriet Lookup
+
+enum LantmaterietLookupResult {
+    case invalidLocalState
+    case requestError(error: Error?)
+    case success(kommun: String?, fastighetsbeteckning: String?)
 }
 
-guard let sweRef = gps.SWEREF else {
-    print("Couldn't convert to SWEREF")
-    exit(1)
+func lantmaterietLookup(for swerefCoordinate: SWEREFCoordinate) -> LantmaterietLookupResult {
+
+    let lookupUrl = URL(string: "https://kso.etjanster.lantmateriet.se/sercxi-fastighet/registerenhetsreferensV2?buffer=1")!
+
+    let request = NSMutableURLRequest(url: lookupUrl, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 5.0)
+    request.httpMethod = "POST"
+    request.setValue("application/text", forHTTPHeaderField: "Content-Type")
+
+    let requestPayload: [String: Any] = ["type": "Point", "coordinates": [swerefCoordinate.x, swerefCoordinate.y]]
+    guard let body = try? JSONSerialization.data(withJSONObject: requestPayload, options: []) else {
+        print("Couldn't encode JSON")
+        return .invalidLocalState
+    }
+
+    request.httpBody = body
+    var response: URLResponse?
+    let responseData: Data
+    do {
+        try responseData = NSURLConnection.sendSynchronousRequest(request as URLRequest, returning: &response)
+    } catch let e {
+        return .requestError(error: e)
+    }
+
+    guard let httpResponse = response as? HTTPURLResponse else {
+        print("Got invalid response")
+        return .requestError(error: nil)
+    }
+
+    guard httpResponse.statusCode == 200 else {
+        print("Got error code: \(httpResponse.statusCode)")
+        return .requestError(error: nil)
+    }
+
+    guard let responseBody = try? JSONSerialization.jsonObject(with: responseData, options: []) else {
+        print("Response isn't JSON")
+        return .requestError(error: nil)
+    }
+
+    guard let dictionary = (responseBody as? [Any])?.first as? [String: Any] else {
+        print("Response not as expected")
+        return .requestError(error: nil)
+    }
+
+    let kommun = dictionary["registeromrade"] as? String
+    var fastighetsbeteckning: String? = nil
+    if let trakt = dictionary["trakt"] as? String,
+        let block = dictionary["block"] as? String,
+        let enhet = dictionary["enhet"] as? String {
+        fastighetsbeteckning = "\(trakt) \(block):\(enhet)"
+    }
+
+    return .success(kommun: kommun, fastighetsbeteckning: fastighetsbeteckning)
 }
 
-let gpsRoundTrip = sweRef.wgsCoordinate
-let allowableError: CLLocationDistance = 0.1
-guard gpsRoundTrip.distance(from: gps) <= allowableError else {
-    print("Coordinate conversions gave too big an error!")
-    exit(1)
+// MARK: - Script
+
+let path = "~/Downloads/Capture One Export/DJI_0636.jpg" as NSString
+let urls = [URL(fileURLWithPath: path.expandingTildeInPath)]
+
+for url in urls {
+
+    guard let gps = geotag(inImageAt: url) else {
+        print("No geotag present in \(url.lastPathComponent)")
+        continue
+    }
+
+    print("Performing lookups for \(url.lastPathComponent)…")
+
+    guard let sweRef = gps.SWEREF else {
+        print("Couldn't convert coordinate to SWEREF")
+        continue
+    }
+
+    let gpsRoundTrip = sweRef.wgsCoordinate
+    let allowableError: CLLocationDistance = 0.1
+    guard gpsRoundTrip.distance(from: gps) <= allowableError else {
+        print("Coordinate conversions gave too big an error!")
+        continue
+    }
+
+    print("SWEREF coordinate of \(url.lastPathComponent) is \(sweRef)")
+
+    switch lantmaterietLookup(for: sweRef) {
+    case .invalidLocalState: print("Internal error when building request")
+    case .requestError(let error): print("Error making request: \(String(describing: error))")
+    case .success(let kommun, let fastighetsbeteckning): print("Kommun: \(kommun ?? "<unknown>"), Fast: \(fastighetsbeteckning ?? "<unknown>")")
+    }
+
+    print("======================")
+
 }
 
-print("SWEREF coordinate of image is \(sweRef)")
+
+
