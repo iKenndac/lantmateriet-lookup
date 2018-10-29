@@ -1396,6 +1396,7 @@
 				);
 				INFOPLIST_FILE = "lantmateriet-generator.xcodeproj/lantmateriet_generator_Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) $(TOOLCHAIN_DIR)/usr/lib/swift/macosx @executable_path";
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				OTHER_CFLAGS = "$(inherited)";
 				OTHER_LDFLAGS = "$(inherited)";
 				OTHER_SWIFT_FLAGS = "$(inherited) -Xcc -fmodule-map-file=$(SRCROOT)/.build/checkouts/swift-package-manager.git--7279501034998425204/Sources/clibc/include/module.modulemap";
@@ -1420,6 +1421,7 @@
 				);
 				INFOPLIST_FILE = "lantmateriet-generator.xcodeproj/lantmateriet_generator_Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) $(TOOLCHAIN_DIR)/usr/lib/swift/macosx @executable_path";
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				OTHER_CFLAGS = "$(inherited)";
 				OTHER_LDFLAGS = "$(inherited)";
 				OTHER_SWIFT_FLAGS = "$(inherited) -Xcc -fmodule-map-file=$(SRCROOT)/.build/checkouts/swift-package-manager.git--7279501034998425204/Sources/clibc/include/module.modulemap";

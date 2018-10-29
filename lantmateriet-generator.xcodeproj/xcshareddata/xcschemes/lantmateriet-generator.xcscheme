@@ -58,11 +58,99 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0587.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0005.jpg&quot;"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0013.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0016.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0026.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0031.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0032.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0033.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0049.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0056.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0578.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0588.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0590.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0592.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0593.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0594.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0597.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0603.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0606.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0608.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0611.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0622.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0628.jpg&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "&quot;/Users/dkennett/Downloads/Capture One Export/DJI_0636.jpg&quot;"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

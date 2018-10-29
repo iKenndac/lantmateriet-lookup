@@ -486,6 +486,18 @@ func geotag(inImageAt url: Foundation.URL) -> CLLocation? {
     return CLLocation(latitude: lat, longitude: lon)
 }
 
+// MARK: - Output
+
+func printUser(_ str: String) {
+    stderrStream.write(str + "\n")
+    stderrStream.flush()
+}
+
+func printResult(_ str: String) {
+    stdoutStream.write(str + "\n")
+    stdoutStream.flush()
+}
+
 // MARK: - Lantmäteriet Lookup
 
 enum LantmaterietLookupResult {
@@ -504,7 +516,7 @@ func lantmaterietLookup(for swerefCoordinate: SWEREFCoordinate) -> LantmaterietL
 
     let requestPayload: [String: Any] = ["type": "Point", "coordinates": [swerefCoordinate.x, swerefCoordinate.y]]
     guard let body = try? JSONSerialization.data(withJSONObject: requestPayload, options: []) else {
-        print("Couldn't encode JSON")
+        printUser("Couldn't encode JSON")
         return .invalidLocalState
     }
 
@@ -518,22 +530,32 @@ func lantmaterietLookup(for swerefCoordinate: SWEREFCoordinate) -> LantmaterietL
     }
 
     guard let httpResponse = response as? HTTPURLResponse else {
-        print("Got invalid response")
+        printUser("Got invalid response from Läntmateriet")
         return .requestError(error: nil)
     }
 
     guard httpResponse.statusCode == 200 else {
-        print("Got error code: \(httpResponse.statusCode)")
+        printUser("Got error code: \(httpResponse.statusCode) from Läntmateriet")
         return .requestError(error: nil)
     }
 
     guard let responseBody = try? JSONSerialization.jsonObject(with: responseData, options: []) else {
-        print("Response isn't JSON")
+        printUser("Response from Läntmateriet isn't JSON")
         return .requestError(error: nil)
     }
 
-    guard let dictionary = (responseBody as? [Any])?.first as? [String: Any] else {
-        print("Response not as expected")
+    guard let outerArray = responseBody as? [Any] else {
+        printUser("Response from Läntmateriet not as expected")
+        return .requestError(error: nil)
+    }
+
+    if outerArray.count == 0 {
+        // If Läntmateriet doesn't have a database entry for the point, it'll return an empty array.
+        return .success(kommun: nil, fastighetsbeteckning: nil)
+    }
+
+    guard let dictionary = outerArray.first as? [String: Any] else {
+        printUser("Response from Läntmateriet not as expected")
         return .requestError(error: nil)
     }
 
@@ -548,32 +570,147 @@ func lantmaterietLookup(for swerefCoordinate: SWEREFCoordinate) -> LantmaterietL
     return .success(kommun: kommun, fastighetsbeteckning: fastighetsbeteckning)
 }
 
+// MARK: - Geocoding
+
+enum GeocodeResult {
+    case success(result: String)
+    case lowAccuracyResult(result: String)
+    case failure
+}
+
+func reverseGeocode(for location: CLLocation) -> GeocodeResult {
+    let geocoder = CLGeocoder()
+    let sweden = Locale(identifier: "se")
+    var result: GeocodeResult = .failure
+
+    geocoder.reverseGeocodeLocation(location, preferredLocale: sweden) { placemarks, error in
+        if let error = error as? CLError {
+            switch error.code {
+            case .network: printUser("Lookup failed due to no network connection or rate limiting.")
+            case .geocodeFoundNoResult: printUser("Reverse geocode got no result!")
+            case .geocodeFoundPartialResult: printUser("Reverse geocode got partial result!")
+            default: printUser("Reverse geocode got error: \(error.code)")
+            }
+            result = .failure
+        } else if let placemark = placemarks?.first {
+            // Admin area: Stockholms län
+            // Sub admin area: Botkyrka
+            // Name: Stora nygatan 26
+            // Locality: Botkyrka
+            // Sublocality: Norsborg
+            // Thoroughfare: Stora nygatan
+            // SubThoroughfare: 26
+
+            if let sub = placemark.subThoroughfare, let thorough = placemark.thoroughfare {
+                // Street name and number
+                result = .success(result: "\(thorough) \(sub)")
+            } else if let thorough = placemark.thoroughfare, let admin = placemark.subAdministrativeArea {
+                result = .success(result: "\(thorough), \(admin)")
+            } else if let thorough = placemark.thoroughfare {
+                result = .success(result: thorough)
+            } else if let local = placemark.locality {
+                result = .lowAccuracyResult(result: local)
+            }
+        } else {
+            result = .failure
+        }
+        CFRunLoopStop(CFRunLoopGetCurrent())
+    }
+
+    // Our Geocoder uses async callbacks to the main queue, so we need to run the runloop
+    // to allow that to happen. The callback will stop the runloop so we can carry on.
+    CFRunLoopRun()
+    return result
+}
+
 // MARK: - Script
+
+struct LantmaterietImageEntry {
+    let filename: String
+    let coordinate: CLLocation?
+    var swerefCoordinate: SWEREFCoordinate?
+    var streetAddress: String?
+    var streetAddressIsLowAccuracy: Bool = false
+    var kommun: String?
+    var fastighetsbeteckning: String?
+
+    init(filename: String, coordinate: CLLocation?) {
+        self.filename = filename
+        self.coordinate = coordinate
+    }
+
+    var outputColumns: [String] {
+        var columns = [String]()
+        columns.append(filename)
+
+        // Street address
+        if let streetAddr = streetAddress {
+            if streetAddressIsLowAccuracy {
+                columns.append("LOW ACCURACY: \(streetAddr)")
+            } else {
+                columns.append(streetAddr)
+            }
+        } else {
+            columns.append("<Street address missing>")
+        }
+
+        // Kommun
+        if let kommun = kommun {
+            columns.append(kommun)
+        } else {
+            columns.append("<Kommun missing>")
+        }
+
+        // Fastighetsbeteckning
+        if let fast = fastighetsbeteckning {
+            columns.append(fast)
+        } else {
+            columns.append("<Fastighetsbeteckning missing>")
+        }
+
+        if let coord = coordinate {
+            columns.append("\(coord.coordinate.latitude) N, \(coord.coordinate.longitude) E")
+        } else {
+            columns.append("<WGS coordinate missing>")
+        }
+
+        if let coord = swerefCoordinate {
+            columns.append(coord.description)
+        } else {
+            columns.append("<SWEREF 99 TM coordinate missing>")
+        }
+
+        return columns
+    }
+}
 
 let arguments = ProcessInfo.processInfo.arguments.dropFirst()
 
 let parser = ArgumentParser(usage: "<options>", overview: "Generate a dataset for Lantmäteriet approval of the given images.")
 let pathsArgument = parser.add(option: "--images", shortName: "-i", kind: [String].self, strategy: ArrayParsingStrategy.upToNextOption,
                                usage: "The images to look up.")
+let verboseArgument = parser.add(option: "--verbose", shortName: "-v", kind: Bool.self, usage: "Prints extra output.")
 
-func processArguments(arguments: ArgumentParser.Result) -> [String] {
-    if let paths = arguments.get(pathsArgument) {
-        return paths
-    } else {
-        return []
-    }
+func processArguments(arguments: ArgumentParser.Result) -> (verbose: Bool, paths: [String]) {
+    var result = (false, [String]())
+    if let verbose = arguments.get(verboseArgument) { result.0 = verbose }
+    if let paths = arguments.get(pathsArgument) { result.1 = paths }
+    return result
 }
 
 let paths: [String]
+let verbose: Bool
 
 do {
     let parsedArguments = try parser.parse(Array(arguments))
-    paths = processArguments(arguments: parsedArguments)
+    let processedArguments = processArguments(arguments: parsedArguments)
+    paths = processedArguments.paths
+    verbose = processedArguments.verbose
 } catch let error as ArgumentParserError {
-    print(error.description)
+    printUser(error.description)
     exit(1)
 } catch let error {
-    print(error.localizedDescription)
+    printUser(error.localizedDescription)
     exit(1)
 }
 
@@ -583,39 +720,72 @@ guard paths.count > 0 else {
 }
 
 let urls = paths.compactMap({ URL(fileURLWithPath: $0) })
+var entries = [LantmaterietImageEntry]()
 
-for url in urls {
+for (index, url) in urls.enumerated() {
+    let filename = url.lastPathComponent
 
     guard let gps = geotag(inImageAt: url) else {
-        print("No geotag present in \(url.lastPathComponent)")
+        printUser("No geotag present in \(filename)")
+        entries.append(LantmaterietImageEntry(filename: filename, coordinate: nil))
         continue
     }
 
-    print("Performing lookups for \(url.lastPathComponent)…")
+    var entry = LantmaterietImageEntry(filename: filename, coordinate: gps)
+    printUser("Performing lookups for \(filename) (\(index + 1) of \(urls.count))…")
 
     guard let sweRef = gps.SWEREF else {
-        print("Couldn't convert coordinate to SWEREF")
+        printUser("Couldn't convert coordinate to SWEREF")
         continue
     }
+
+    entry.swerefCoordinate = sweRef
 
     let gpsRoundTrip = sweRef.wgsCoordinate
     let allowableError: CLLocationDistance = 0.1
     guard gpsRoundTrip.distance(from: gps) <= allowableError else {
-        print("Coordinate conversions gave too big an error!")
+        printUser("Coordinate conversions gave too big an error!")
         continue
     }
 
-    print("SWEREF coordinate of \(url.lastPathComponent) is \(sweRef)")
-
-    switch lantmaterietLookup(for: sweRef) {
-    case .invalidLocalState: print("Internal error when building request")
-    case .requestError(let error): print("Error making request: \(String(describing: error))")
-    case .success(let kommun, let fastighetsbeteckning): print("Kommun: \(kommun ?? "<unknown>"), Fast: \(fastighetsbeteckning ?? "<unknown>")")
+    if verbose {
+        printUser("WGS84 coordinate of \(filename) is \(gps.coordinate)")
+        printUser("SWEREF coordinate of \(filename) is \(sweRef)")
     }
 
-    print("======================")
+    switch lantmaterietLookup(for: sweRef) {
+    case .invalidLocalState: printUser("Internal error when building request")
+    case .requestError(let error): printUser("Error making request: \(String(describing: error))")
+    case .success(let kommun, let fastighetsbeteckning):
+        if verbose {
+            if kommun == nil || fastighetsbeteckning == nil {
+                printUser("Lantmäteriet lookup for \(filename) was low-accuracy!")
+            } else  {
+                printUser("Lantmäteriet lookup for \(filename) got kommun: \(kommun!), fast.: \(fastighetsbeteckning!)")
+            }
+        }
+        entry.kommun = kommun
+        entry.fastighetsbeteckning = fastighetsbeteckning
+    }
 
+    switch reverseGeocode(for: gps) {
+    case .success(let result):
+        entry.streetAddress = result
+        if verbose { printUser("Reverse geocode for \(filename) got \(result)") }
+    case .lowAccuracyResult(let result):
+        entry.streetAddress = result
+        entry.streetAddressIsLowAccuracy = true
+        if verbose { printUser("Reverse geocode for \(filename) got low-accuracy result \(result)") }
+    case .failure:
+        printUser("Reverse-geocode for \(filename) failed. Check network, or you might have been rate limited!")
+    }
+
+    entries.append(entry)
+
+    // All of the web APIs we're using are prone to rate limiting. Wait a little bit, to be nice.
+    Thread.sleep(forTimeInterval: 0.5)
+    if verbose { printUser("======================") }
 }
 
-
+entries.forEach({ printResult($0.outputColumns.joined(separator: "\t")) })
 
