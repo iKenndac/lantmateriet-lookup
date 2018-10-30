@@ -450,6 +450,20 @@ struct SWEREFCoordinate: CustomStringConvertible {
     var description: String {
         return String(format: "%1.3f, %1.3f", x, y)
     }
+
+    var lantmaterietUrl: Foundation.URL {
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "kso.etjanster.lantmateriet.se"
+        components.queryItems = [
+            URLQueryItem(name: "e", value: "\(Int(x))"),
+            URLQueryItem(name: "n", value: "\(Int(y))"),
+            URLQueryItem(name: "z", value: "11"),
+            URLQueryItem(name: "profile", value: "default_background_noauth")
+        ]
+        return components.url!
+    }
+
 }
 
 extension CLLocation {
@@ -457,6 +471,14 @@ extension CLLocation {
         let utm = gpsToUTM(lat: coordinate.latitude, lon: coordinate.longitude, zone: SWEREFCoordinate.utmZone)
         guard utm.southernHemisphere == false else { return nil }
         return SWEREFCoordinate(x: utm.x, y: utm.y)
+    }
+
+    var googleMapsUrl: Foundation.URL {
+        var components = URLComponents()
+        components.scheme = "http"
+        components.host = "www.google.com"
+        components.path = "/maps/place/\(coordinate.latitude),\(coordinate.longitude)"
+        return components.url!
     }
 }
 
@@ -565,6 +587,10 @@ func lantmaterietLookup(for swerefCoordinate: SWEREFCoordinate) -> LantmaterietL
         let block = dictionary["block"] as? String,
         let enhet = dictionary["enhet"] as? String {
         fastighetsbeteckning = "\(trakt) \(block):\(enhet)"
+    } else if let trakt = dictionary["trakt"] as? String,
+        let enhet = dictionary["enhet"] as? String {
+        // It's valid to not have a block.
+        fastighetsbeteckning = "\(trakt) \(enhet)"
     }
 
     return .success(kommun: kommun, fastighetsbeteckning: fastighetsbeteckning)
@@ -582,6 +608,10 @@ func reverseGeocode(for location: CLLocation) -> GeocodeResult {
     let geocoder = CLGeocoder()
     let sweden = Locale(identifier: "se")
     var result: GeocodeResult = .failure
+
+    guard #available(OSX 10.13, *, *) else {
+        return result
+    }
 
     geocoder.reverseGeocodeLocation(location, preferredLocale: sweden) { placemarks, error in
         if let error = error as? CLError {
@@ -639,7 +669,13 @@ struct LantmaterietImageEntry {
         self.coordinate = coordinate
     }
 
-    var outputColumns: [String] {
+    static func plainTextOutputColumnTitles(includingUrls: Bool) -> [String] {
+        var titles = ["File", "Street Address", "Kommun", "Fastighetsbeteckning", "WGS84 Coordinate", "SWEREF 99 TM coordinate"]
+        if includingUrls { titles.append(contentsOf: ["Google Maps URL", "Lantmäteriet URL"]) }
+        return titles
+    }
+
+    func plainTextOutputColumns(includingUrls: Bool) -> [String] {
         var columns = [String]()
         columns.append(filename)
 
@@ -651,33 +687,47 @@ struct LantmaterietImageEntry {
                 columns.append(streetAddr)
             }
         } else {
-            columns.append("<Street address missing>")
+            columns.append("(Street address missing)")
         }
 
         // Kommun
         if let kommun = kommun {
             columns.append(kommun)
         } else {
-            columns.append("<Kommun missing>")
+            columns.append("(Kommun missing)")
         }
 
         // Fastighetsbeteckning
         if let fast = fastighetsbeteckning {
             columns.append(fast)
         } else {
-            columns.append("<Fastighetsbeteckning missing>")
+            columns.append("(Fastighetsbeteckning missing)")
         }
 
         if let coord = coordinate {
             columns.append("\(coord.coordinate.latitude) N, \(coord.coordinate.longitude) E")
         } else {
-            columns.append("<WGS coordinate missing>")
+            columns.append("(WGS coordinate missing)")
         }
 
         if let coord = swerefCoordinate {
             columns.append(coord.description)
         } else {
-            columns.append("<SWEREF 99 TM coordinate missing>")
+            columns.append("(SWEREF 99 TM coordinate missing)")
+        }
+
+        if includingUrls {
+            if let url = coordinate?.googleMapsUrl {
+                columns.append(url.absoluteString)
+            } else {
+                columns.append("(WGS coordinate coordinate missing)")
+            }
+
+            if let url = swerefCoordinate?.lantmaterietUrl {
+                columns.append(url.absoluteString)
+            } else {
+                columns.append("(SWEREF 99 TM coordinate missing)")
+            }
         }
 
         return columns
@@ -689,23 +739,24 @@ let arguments = ProcessInfo.processInfo.arguments.dropFirst()
 let parser = ArgumentParser(usage: "<options>", overview: "Generate a dataset for Lantmäteriet approval of the given images.")
 let pathsArgument = parser.add(option: "--images", shortName: "-i", kind: [String].self, strategy: ArrayParsingStrategy.upToNextOption,
                                usage: "The images to look up.")
+let textOutputArgument = parser.add(option: "--tsvOutput", shortName: "-t", kind: String.self, usage: "Path for plain text (.tsv) output.")
+let htmlOutputArgument = parser.add(option: "--htmlOutput", shortName: "-h", kind: String.self, usage: "Path for HTML output.")
+let includeUrlsArgument = parser.add(option: "--includeUrls", shortName: "-u", kind: Bool.self, usage: "Includes manual lookup URLs in plain text output.")
 let verboseArgument = parser.add(option: "--verbose", shortName: "-v", kind: Bool.self, usage: "Prints extra output.")
-
-func processArguments(arguments: ArgumentParser.Result) -> (verbose: Bool, paths: [String]) {
-    var result = (false, [String]())
-    if let verbose = arguments.get(verboseArgument) { result.0 = verbose }
-    if let paths = arguments.get(pathsArgument) { result.1 = paths }
-    return result
-}
 
 let paths: [String]
 let verbose: Bool
+let includeUrls: Bool
+let textOutputPath: String?
+let htmlOutputPath: String?
 
 do {
     let parsedArguments = try parser.parse(Array(arguments))
-    let processedArguments = processArguments(arguments: parsedArguments)
-    paths = processedArguments.paths
-    verbose = processedArguments.verbose
+    verbose = parsedArguments.get(verboseArgument) ?? false
+    includeUrls = parsedArguments.get(includeUrlsArgument) ?? false
+    paths = parsedArguments.get(pathsArgument) ?? []
+    textOutputPath = parsedArguments.get(textOutputArgument)
+    htmlOutputPath = parsedArguments.get(htmlOutputArgument)
 } catch let error as ArgumentParserError {
     printUser(error.description)
     exit(1)
@@ -787,5 +838,62 @@ for (index, url) in urls.enumerated() {
     if verbose { printUser("======================") }
 }
 
-entries.forEach({ printResult($0.outputColumns.joined(separator: "\t")) })
+if let tsvPath = textOutputPath {
+    let expandedPath = (tsvPath as NSString).expandingTildeInPath
+    var lines: [String] = [LantmaterietImageEntry.plainTextOutputColumnTitles(includingUrls: includeUrls).joined(separator: "\t")]
+    lines.append(contentsOf: entries.compactMap({ $0.plainTextOutputColumns(includingUrls: includeUrls).joined(separator: "\t") }))
+    let data = lines.joined(separator: "\n").data(using: .utf8)!
+    do {
+        try data.write(to: URL(fileURLWithPath: expandedPath))
+    } catch {
+        printUser("Writing to \(tsvPath) failed: \(error)")
+    }
+}
+
+if let htmlPath = htmlOutputPath {
+    let expandedPath = (htmlPath as NSString).expandingTildeInPath
+    var htmlLines = [String]()
+    htmlLines.append("<html>")
+    htmlLines.append("<head>")
+    htmlLines.append("<meta charset=\"utf-8\">")
+    htmlLines.append("<meta name=\"generator\" content=\"lantmateriet-generator\">")
+    // TODO: Add title
+    htmlLines.append("</head>")
+    htmlLines.append("<body>")
+    htmlLines.append("<table>")
+    htmlLines.append("<tr>")
+    let headers = LantmaterietImageEntry.plainTextOutputColumnTitles(includingUrls: includeUrls)
+    htmlLines.append(headers.compactMap({ "<th>\($0)</th>" }).joined())
+    htmlLines.append("</tr>")
+    for entry in entries {
+        var columns = entry.plainTextOutputColumns(includingUrls: false).compactMap({ "<td>\($0)</td>" })
+        if includeUrls {
+            if let googleMapsUrl = entry.coordinate?.googleMapsUrl {
+                columns.append("<td><a href=\"\(googleMapsUrl)\" target=\"_blank\">Google Maps</a></td>")
+            } else {
+                columns.append("<td></td>")
+            }
+            if let lantMaterietUrl = entry.swerefCoordinate?.lantmaterietUrl {
+                columns.append("<td><a href=\"\(lantMaterietUrl)\" target=\"_blank\">Lantmäteriet</a></td>")
+            } else {
+                columns.append("<td></td>")
+            }
+        }
+        htmlLines.append("<tr>\(columns.joined())</tr>")
+    }
+    htmlLines.append("</table>")
+    htmlLines.append("</head>")
+    htmlLines.append("</html>")
+    let data = htmlLines.joined(separator: "\n").data(using: .utf8)!
+    do {
+        try data.write(to: URL(fileURLWithPath: expandedPath))
+    } catch {
+        printUser("Writing to \(htmlPath) failed: \(error)")
+    }
+}
+
+if textOutputPath == nil && htmlOutputPath == nil {
+    // Print to stdout if no output methods are given.
+    entries.forEach({ printResult($0.plainTextOutputColumns(includingUrls: includeUrls).joined(separator: "\t")) })
+}
 
