@@ -448,7 +448,7 @@ struct SWEREFCoordinate: CustomStringConvertible {
     }
 
     var description: String {
-        return String(format: "%1.3f, %1.3f", x, y)
+        return String(format: "N %1.3f, E %1.3f", y, x)
     }
 
     var lantmaterietUrl: Foundation.URL {
@@ -670,7 +670,7 @@ struct LantmaterietImageEntry {
     }
 
     static func plainTextOutputColumnTitles(includingUrls: Bool) -> [String] {
-        var titles = ["File", "Street Address", "Kommun", "Fastighetsbeteckning", "WGS84 Coordinate", "SWEREF 99 TM coordinate"]
+        var titles = ["File", "Street Address", "Kommun", "Fastighetsbeteckning", "WGS84 Coordinate", "SWEREF Coordinate"]
         if includingUrls { titles.append(contentsOf: ["Google Maps URL", "Lantmäteriet URL"]) }
         return titles
     }
@@ -682,51 +682,51 @@ struct LantmaterietImageEntry {
         // Street address
         if let streetAddr = streetAddress {
             if streetAddressIsLowAccuracy {
-                columns.append("LOW ACCURACY: \(streetAddr)")
+                columns.append("\(streetAddr)*")
             } else {
                 columns.append(streetAddr)
             }
         } else {
-            columns.append("(Street address missing)")
+            columns.append("(Missing)")
         }
 
         // Kommun
         if let kommun = kommun {
             columns.append(kommun)
         } else {
-            columns.append("(Kommun missing)")
+            columns.append("(Missing)")
         }
 
         // Fastighetsbeteckning
         if let fast = fastighetsbeteckning {
             columns.append(fast)
         } else {
-            columns.append("(Fastighetsbeteckning missing)")
+            columns.append("(Missing)")
         }
 
         if let coord = coordinate {
-            columns.append("\(coord.coordinate.latitude) N, \(coord.coordinate.longitude) E")
+            columns.append(String(format: "%1.7f N, %1.7f E", coord.coordinate.latitude, coord.coordinate.longitude))
         } else {
-            columns.append("(WGS coordinate missing)")
+            columns.append("(Missing)")
         }
 
         if let coord = swerefCoordinate {
             columns.append(coord.description)
         } else {
-            columns.append("(SWEREF 99 TM coordinate missing)")
+            columns.append("(Missing)")
         }
 
         if includingUrls {
             if let url = coordinate?.googleMapsUrl {
                 columns.append(url.absoluteString)
             } else {
-                columns.append("(WGS coordinate coordinate missing)")
+                columns.append("(Missing)")
             }
 
             if let url = swerefCoordinate?.lantmaterietUrl {
                 columns.append(url.absoluteString)
             } else {
-                columns.append("(SWEREF 99 TM coordinate missing)")
+                columns.append("(Missing)")
             }
         }
 
@@ -857,7 +857,16 @@ if let htmlPath = htmlOutputPath {
     htmlLines.append("<head>")
     htmlLines.append("<meta charset=\"utf-8\">")
     htmlLines.append("<meta name=\"generator\" content=\"lantmateriet-generator\">")
-    // TODO: Add title
+    htmlLines.append("<style>")
+    htmlLines.append("body { font-family: sans-serif; }")
+    htmlLines.append("table { border-collapse: collapse; border: 1px solid #ddd; }")
+    htmlLines.append("tr { font-size: 12px; }")
+    htmlLines.append("th, td { padding: 10px; border-bottom: 1px solid #ddd; }")
+    htmlLines.append("th { background: #ddd; text-align: left; }")
+    htmlLines.append("tr:nth-child(odd) { background-color: #f2f2f2; }")
+    htmlLines.append("td:first-child { font-weight: bold; }")
+    htmlLines.append("p { padding: 10px; font-size: 12px; }")
+    htmlLines.append("</style>")
     htmlLines.append("</head>")
     htmlLines.append("<body>")
     htmlLines.append("<table>")
@@ -882,6 +891,7 @@ if let htmlPath = htmlOutputPath {
         htmlLines.append("<tr>\(columns.joined())</tr>")
     }
     htmlLines.append("</table>")
+    htmlLines.append("<p>Locations marked with an asterisk (*) gave a low-accuracy lookup result and should be manually checked. Locations marked with (Missing) gave no lookup result at all.</p>")
     htmlLines.append("</head>")
     htmlLines.append("</html>")
     let data = htmlLines.joined(separator: "\n").data(using: .utf8)!
