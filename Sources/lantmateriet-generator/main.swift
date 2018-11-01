@@ -739,8 +739,8 @@ let arguments = ProcessInfo.processInfo.arguments.dropFirst()
 let parser = ArgumentParser(usage: "<options>", overview: "Generate a dataset for Lantmäteriet approval of the given images.")
 let pathsArgument = parser.add(option: "--images", shortName: "-i", kind: [String].self, strategy: ArrayParsingStrategy.upToNextOption,
                                usage: "The images to look up.")
-let textOutputArgument = parser.add(option: "--tsvOutput", shortName: "-t", kind: String.self, usage: "Path for plain text (.tsv) output.")
-let htmlOutputArgument = parser.add(option: "--htmlOutput", shortName: "-h", kind: String.self, usage: "Path for HTML output.")
+let textOutputArgument = parser.add(option: "--tsvOutput", shortName: "-tsv", kind: String.self, usage: "Path for plain text (.tsv) output.")
+let htmlOutputArgument = parser.add(option: "--htmlOutput", shortName: "-html", kind: String.self, usage: "Path for HTML output.")
 let includeUrlsArgument = parser.add(option: "--includeUrls", shortName: "-u", kind: Bool.self, usage: "Includes manual lookup URLs in plain text output.")
 let verboseArgument = parser.add(option: "--verbose", shortName: "-v", kind: Bool.self, usage: "Prints extra output.")
 
