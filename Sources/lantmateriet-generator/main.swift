@@ -871,22 +871,21 @@ if let htmlPath = htmlOutputPath {
     htmlLines.append("<body>")
     htmlLines.append("<table>")
     htmlLines.append("<tr>")
-    let headers = LantmaterietImageEntry.plainTextOutputColumnTitles(includingUrls: includeUrls)
+    let headers = LantmaterietImageEntry.plainTextOutputColumnTitles(includingUrls: true)
     htmlLines.append(headers.compactMap({ "<th>\($0)</th>" }).joined())
     htmlLines.append("</tr>")
     for entry in entries {
         var columns = entry.plainTextOutputColumns(includingUrls: false).compactMap({ "<td>\($0)</td>" })
-        if includeUrls {
-            if let googleMapsUrl = entry.coordinate?.googleMapsUrl {
-                columns.append("<td><a href=\"\(googleMapsUrl)\" target=\"_blank\">Google Maps</a></td>")
-            } else {
-                columns.append("<td></td>")
-            }
-            if let lantMaterietUrl = entry.swerefCoordinate?.lantmaterietUrl {
-                columns.append("<td><a href=\"\(lantMaterietUrl)\" target=\"_blank\">Lantmäteriet</a></td>")
-            } else {
-                columns.append("<td></td>")
-            }
+        // Manually add the URL columns to build the links.
+        if let googleMapsUrl = entry.coordinate?.googleMapsUrl {
+            columns.append("<td><a href=\"\(googleMapsUrl)\" target=\"_blank\">Google Maps</a></td>")
+        } else {
+            columns.append("<td></td>")
+        }
+        if let lantMaterietUrl = entry.swerefCoordinate?.lantmaterietUrl {
+            columns.append("<td><a href=\"\(lantMaterietUrl)\" target=\"_blank\">Lantmäteriet</a></td>")
+        } else {
+            columns.append("<td></td>")
         }
         htmlLines.append("<tr>\(columns.joined())</tr>")
     }
