@@ -2,7 +2,7 @@
 
 //
 //  main.swift
-//  lantmateriet-generator
+//  lantmateriet-lookup
 //
 //  Created by Daniel Kennett on 2018-10-28.
 //  Copyright © 2018 Daniel Kennett. All rights reserved.
@@ -856,7 +856,7 @@ if let htmlPath = htmlOutputPath {
     htmlLines.append("<html>")
     htmlLines.append("<head>")
     htmlLines.append("<meta charset=\"utf-8\">")
-    htmlLines.append("<meta name=\"generator\" content=\"lantmateriet-generator\">")
+    htmlLines.append("<meta name=\"generator\" content=\"lantmateriet-lookup\">")
     htmlLines.append("<style>")
     htmlLines.append("body { font-family: sans-serif; }")
     htmlLines.append("table { border-collapse: collapse; border: 1px solid #ddd; }")

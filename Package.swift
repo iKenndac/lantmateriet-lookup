@@ -2,11 +2,11 @@
 import PackageDescription
 
 let package = Package(
-    name: "lantmateriet-generator",
+    name: "lantmateriet-lookup",
     dependencies: [
         .package(url: "https://github.com/apple/swift-package-manager.git", from: "0.1.0"),
         ],
     targets: [
-        .target(name: "lantmateriet-generator", dependencies: ["Utility"]),
+        .target(name: "lantmateriet-lookup", dependencies: ["Utility"]),
         ]
 )
