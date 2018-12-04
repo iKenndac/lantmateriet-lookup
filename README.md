@@ -1,4 +1,4 @@
-# Läntmateriet Lookup
+# Lantmäteriet Lookup
 
 Generate aerial image metadata for submission to Lantmäteriet for public distribution approval.
 
@@ -13,9 +13,9 @@ Sweden has strong surveillence laws, and as such it's illegal to publicly publis
 More information on Sweden's laws surrounding drones can be found (in Swedish):
 
 - On the [Transportstyrelsen](https://www.transportstyrelsen.se/dronare) website.
-- On the [Läntmateriet](https://www.lantmateriet.se/sv/Om-Lantmateriet/Rattsinformation/spridningstillstand) website.
+- On the [Lantmäteriet](https://www.lantmateriet.se/sv/Om-Lantmateriet/Rattsinformation/spridningstillstand) website.
 
-Submission to Läntmateriet for photo and video approval can be made using [this form](https://www.lantmateriet.se/sv/Om-Lantmateriet/Rattsinformation/spridningstillstand/ansok-om-spridningstillstand/). Multiple images can be submitted from one form submission.
+Submission to Lantmäteriet for photo and video approval can be made using [this form](https://www.lantmateriet.se/sv/Om-Lantmateriet/Rattsinformation/spridningstillstand/ansok-om-spridningstillstand/). Multiple images can be submitted from one form submission.
 
 For each image you wish to publish, you need to provide the image's:
 
@@ -29,13 +29,13 @@ An entry for a single image might look like this:
 | --- | --- | --- | --- | --- |
 | DJI_0005.jpg | Fågelsta Arbetarbostaden 2 | SALEM | VÄLLINGE 1:1 | 59° 13’ 19,65” N, 17° 44’ 41,166” E |
 
-You can manually look up a coordinate's street address using Google Maps or similar, but for the fastighetsbeteckning you need to use the [Läntmateriet map](https://kso.etjanster.lantmateriet.se) to look it up.
+You can manually look up a coordinate's street address using Google Maps or similar, but for the fastighetsbeteckning you need to use the [Lantmäteriet map](https://kso.etjanster.lantmateriet.se) to look it up.
 
 As you can imagine, doing this manually can be a very time-consuming task!
 
 ### What does it do?
 
-This little program automates the above process, taking some images and generating a table of data for submission to Läntmateriet. 
+This little program automates the above process, taking some images and generating a table of data for submission to Lantmäteriet. 
 
 This program will **not** do the submission for you! It's reasonably common for automated lookups of addresses and the fastighetsbeteckning to return low-accuracy or no data at all, especially if you're flying your drone over water, or otherwise outside of civilisation. 
 
@@ -50,7 +50,7 @@ This project uses the Swift Package Manager, and requires Xcode 10 or higher be 
 
 ### Using 
 
-For a nice HTML table that includes location lookup links to Google Maps and Läntmateriet to help manually tidying up the data, you can run:
+For a nice HTML table that includes location lookup links to Google Maps and Lantmäteriet to help manually tidying up the data, you can run:
 
 `$ lantmateriet-lookup -i *.jpg -html results.html`
 
@@ -58,7 +58,7 @@ For text-based output, you can run:
 
 `$ lantmateriet-lookup -i *.jpg -tsv results.tsv`
 
-Text output won't include Google Maps and Läntmateriet map URLs by default, but you can include them with `-u`:
+Text output won't include Google Maps and Lantmäteriet map URLs by default, but you can include them with `-u`:
 
 `$ lantmateriet-lookup -i *.jpg -u -tsv results.tsv`
 
